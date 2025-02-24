@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import {
   PerspectiveCamera,
   WebGLRenderer,
@@ -60,7 +61,7 @@ function createScene(target: HTMLElement) {
   return { renderer, scene, camera, primitive, controls };
 }
 
-export function startScene(target: HTMLElement) {
+function startScene(target: HTMLElement) {
   const { renderer, scene, camera, primitive, controls } = createScene(target);
 
   const animate = (t = 0) => {
@@ -71,4 +72,19 @@ export function startScene(target: HTMLElement) {
   };
 
   return animate();
+}
+
+export function useSphere(target: React.RefObject<HTMLElement>) {
+  const scene = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (target.current && !scene.current) {
+      scene.current = 1;
+      startScene(target.current);
+    }
+
+    if (!target.current && !scene.current) {
+      throw new Error('No target element found');
+    }
+  }, []);
 }
