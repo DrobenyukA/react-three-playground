@@ -26,7 +26,7 @@ export const Light = () => {
 
   return (
     <>
-      <directionalLight position={[-10, 10, 10]} ref={directionalLightRef} />
+      <directionalLight position={[0, 100, 100]} ref={directionalLightRef} />
       <ambientLight intensity={0.25} />
     </>
   );

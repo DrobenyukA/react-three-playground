@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Vector3, BoxGeometryProps, Color, ThreeEvent } from '@react-three/fiber';
 import { BufferGeometry, Material, Mesh, NormalBufferAttributes, Object3DEventMap } from 'three';
+import { Line } from '@react-three/drei';
 
 interface Props {
   position: Vector3;
@@ -51,6 +52,7 @@ export const Cube = ({ position, size, color }: Props) => {
       null,
     );
 
+  // Animation example
   //   useFrame((rootState, delta) => {
   //     if (ref.current && !state.isActive) {
   //       ref.current.rotation.x += delta;
@@ -76,7 +78,35 @@ export const Cube = ({ position, size, color }: Props) => {
       onPointerLeave={handlePointerLeave}
     >
       <boxGeometry args={getSize(size)} />
-      <meshStandardMaterial color={state.isHovered ? 'white' : color} />
+      <meshStandardMaterial color={state.isHovered ? 0xffffff : color} />
+      {state.isHovered && (
+        <>
+          <Line
+            points={[
+              [-0.55, -0.5, 0.55],
+              [0.55, -0.5, 0.55],
+            ]}
+            lineWidth={5}
+            color="purple"
+          />
+          <Line
+            points={[
+              [-0.55, -0.5, 0.55],
+              [-0.55, -0.5, -0.55],
+            ]}
+            lineWidth={5}
+            color="purple"
+          />
+          <Line
+            points={[
+              [-0.55, -0.5, 0.55],
+              [-0.55, 0.5, 0.55],
+            ]}
+            lineWidth={5}
+            color="purple"
+          />
+        </>
+      )}
     </mesh>
   );
 };

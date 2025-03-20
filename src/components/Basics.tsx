@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { DragControls, Grid, OrbitControls } from '@react-three/drei';
 
 import { Cube } from './Cube';
 import { Light } from './Light';
@@ -23,16 +23,25 @@ export const Basics = () => {
   return (
     <Canvas className="react-three-fiber">
       <Light />
-      <mesh position={[3, 3, 0]}>
-        <sphereGeometry args={[1]} />
-        <meshStandardMaterial color="orange" />
-      </mesh>
+
+      <Grid position={[0, 0, 0]} infiniteGrid={true} cellColor="white" />
+
+      <DragControls
+        axisLock="x"
+        onDrag={() => setCameraEnabled(false)}
+        onDragEnd={() => setCameraEnabled(true)}
+      >
+        <mesh position={[3, 3, 0]}>
+          <sphereGeometry args={[1]} />
+          <meshStandardMaterial color="orange" />
+        </mesh>
+      </DragControls>
 
       <group position={[0, 0, 0]}>
-        <Cube position={[-0.65, 0.65, -0.65]} size={1} color="red" />
-        <Cube position={[0.65, 0.65, -0.65]} size={1} color="green" />
-        <Cube position={[-0.65, -0.65, -0.65]} size={1} color="blue" />
-        <Cube position={[0.65, -0.65, -0.65]} size={1} color="yellow" />
+        <Cube position={[1, 1.5, 0.5]} size={1} color="red" />
+        {/* <Cube position={[2, 1.5, 0.5]} size={1} color="green" />
+        <Cube position={[1, 0.5, 0.5]} size={1} color="blue" />
+        <Cube position={[2, 0.5, 0.5]} size={1} color="yellow" /> */}
       </group>
 
       <OrbitControls enabled={isCameraEnabled} />
