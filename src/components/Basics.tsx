@@ -4,6 +4,7 @@ import { DragControls, Grid, OrbitControls } from '@react-three/drei';
 import { Cube } from './Cube';
 import { Light } from './Light';
 import { useLayoutEffect, useState } from 'react';
+import { Control } from './Control';
 
 export const Basics = () => {
   const [isCameraEnabled, setCameraEnabled] = useState(true);
@@ -24,7 +25,7 @@ export const Basics = () => {
     <Canvas className="react-three-fiber">
       <Light />
 
-      <Grid position={[0, 0, 0]} infiniteGrid={true} cellColor="white" />
+      <Grid position={[0, 0, 0]} infiniteGrid cellColor="white" />
 
       <DragControls
         axisLock="x"
@@ -39,10 +40,9 @@ export const Basics = () => {
 
       <group position={[0, 0, 0]}>
         <Cube position={[1, 1.5, 0.5]} size={1} color="red" />
-        {/* <Cube position={[2, 1.5, 0.5]} size={1} color="green" />
-        <Cube position={[1, 0.5, 0.5]} size={1} color="blue" />
-        <Cube position={[2, 0.5, 0.5]} size={1} color="yellow" /> */}
       </group>
+
+      <Control position={[3, 0, 3]} color={0xfafafa} />
 
       <OrbitControls enabled={isCameraEnabled} />
     </Canvas>
