@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Vector3 as ThreeVector3 } from 'three';
-import { Vector3, Color, useThree, ThreeEvent } from '@react-three/fiber';
+import {
+  CurvePath,
+  LineCurve3,
+  MeshBasicMaterial,
+  Vector3 as ThreeVector3,
+  TubeGeometry,
+  Vector3,
+} from 'three';
+import { Color, useThree, ThreeEvent } from '@react-three/fiber';
 import { useDrag } from '@use-gesture/react';
 import { animated, useSpring } from '@react-spring/three';
 import get from 'lodash/get';
@@ -9,7 +16,7 @@ import isFunction from 'lodash/isFunction';
 import { calculatePosition } from './utils';
 
 interface Props {
-  position: Vector3;
+  position: [number, number, number];
   radius?: number;
   segments?: number;
   color: Color;
@@ -18,12 +25,34 @@ interface Props {
 
 const SENSITIVITY = 0.15;
 
-export const Control = ({ radius = 0.25, segments = 50, color, ...props }: Props) => {
-  const [position, setPosition] = useState(props.position);
+export const Control = ({ radius = 0.25, segments = 50, color, borderColor, ...props }: Props) => {
+  const [position, setPosition] = useState<[number, number, number]>(props.position);
   const { size, viewport } = useThree();
   const aspect = (size.width / viewport.width) * SENSITIVITY;
 
   const circleArgs = useMemo(() => [radius, segments] as [number, number], [radius, segments]);
+
+  const tube = useMemo(() => {
+    const curve = new CurvePath<ThreeVector3>();
+    const points = [];
+    const width = 0.0125;
+
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      const x = radius * Math.cos(theta);
+      const y = radius * Math.sin(theta);
+      points.push(new Vector3(x, y, 0));
+    }
+
+    for (let i = 0; i < points.length - 1; i++) {
+      curve.add(new LineCurve3(points[i], points[i + 1]));
+    }
+
+    return {
+      geometry: new TubeGeometry(curve, segments, width, 8, false),
+      material: new MeshBasicMaterial({ color: borderColor }),
+    };
+  }, [radius, segments]);
 
   const [spring, api] = useSpring(() => ({ position }), [position]);
 
@@ -47,6 +76,7 @@ export const Control = ({ radius = 0.25, segments = 50, color, ...props }: Props
     },
     { delay: true },
   );
+
   const { onPointerDown, onPointerUp, ...boundAttributes } = bind();
 
   const handlePointerDown = useCallback(
@@ -81,14 +111,18 @@ export const Control = ({ radius = 0.25, segments = 50, color, ...props }: Props
 
   return (
     // @ts-expect-error due to type incompatibility between react-three-fiber and react-spring
-    <animated.mesh
+    <animated.group
       {...spring}
       {...boundAttributes}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
     >
-      <circleGeometry args={circleArgs} />
-      <meshToonMaterial color={color} emissive={0x000000} fog />
-    </animated.mesh>
+      <animated.mesh {...spring}>
+        <circleGeometry args={circleArgs} />
+        <meshToonMaterial color={color} emissive={0x000000} fog />
+      </animated.mesh>
+
+      <animated.mesh {...spring} {...tube} />
+    </animated.group>
   );
 };

@@ -36,13 +36,12 @@ export const Basics = () => {
           <sphereGeometry args={[1]} />
           <meshStandardMaterial color="orange" />
         </mesh>
+        <group position={[0, 0, 0]}>
+          <Cube position={[1, 1.5, 0.5]} size={1} color="red" />
+        </group>
       </DragControls>
 
-      <group position={[0, 0, 0]}>
-        <Cube position={[1, 1.5, 0.5]} size={1} color="red" />
-      </group>
-
-      <Control position={[3, 0, 3]} color={0xfafafa} />
+      <Control position={[3, 0, 3]} color={0xfafafa} borderColor="#0c69f5" />
 
       <OrbitControls enabled={isCameraEnabled} />
     </Canvas>
