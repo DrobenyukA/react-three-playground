@@ -13,7 +13,8 @@ import { animated, useSpring } from '@react-spring/three';
 import get from 'lodash/get';
 import isFunction from 'lodash/isFunction';
 
-import { calculatePosition } from './utils';
+import { calculatePosition, createDiamondIcon, createTriangleIcon } from './utils';
+import { degToRad } from '../../utils';
 
 interface Props {
   position: [number, number, number];
@@ -21,21 +22,32 @@ interface Props {
   segments?: number;
   color: Color;
   borderColor?: string;
+  icon?: 'triangle' | 'diamond';
 }
 
 const SENSITIVITY = 0.15;
+const LINE_WIDTH = 0.0125;
 
-export const Control = ({ radius = 0.25, segments = 50, color, borderColor, ...props }: Props) => {
+export const Control = ({
+  radius = 0.25,
+  segments = 50,
+  color,
+  icon: iconType = 'triangle',
+  borderColor,
+  ...props
+}: Props) => {
   const [position, setPosition] = useState<[number, number, number]>(props.position);
   const { size, viewport } = useThree();
   const aspect = (size.width / viewport.width) * SENSITIVITY;
 
-  const circleArgs = useMemo(() => [radius, segments] as [number, number], [radius, segments]);
+  const coinArgs = useMemo(
+    () => [radius, radius, 0.015, segments] as [number, number, number, number],
+    [radius, segments],
+  );
 
-  const tube = useMemo(() => {
+  const border = useMemo(() => {
     const curve = new CurvePath<ThreeVector3>();
     const points = [];
-    const width = 0.0125;
 
     for (let i = 0; i <= segments; i++) {
       const theta = (i / segments) * Math.PI * 2;
@@ -49,10 +61,25 @@ export const Control = ({ radius = 0.25, segments = 50, color, borderColor, ...p
     }
 
     return {
-      geometry: new TubeGeometry(curve, segments, width, 8, false),
+      geometry: new TubeGeometry(curve, segments, LINE_WIDTH, 8, false),
       material: new MeshBasicMaterial({ color: borderColor }),
     };
   }, [radius, segments]);
+
+  const icon = useMemo(() => {
+    const curve = new CurvePath<ThreeVector3>();
+
+    const points = iconType === 'diamond' ? createDiamondIcon(radius) : createTriangleIcon(radius);
+
+    for (let i = 0; i < points.length - 1; i++) {
+      curve.add(new LineCurve3(points[i], points[i + 1]));
+    }
+
+    return {
+      geometry: new TubeGeometry(curve, segments, LINE_WIDTH, 8, false),
+      material: new MeshBasicMaterial({ color: borderColor }),
+    };
+  }, [radius, segments, iconType, borderColor]);
 
   const [spring, api] = useSpring(() => ({ position }), [position]);
 
@@ -67,7 +94,7 @@ export const Control = ({ radius = 0.25, segments = 50, color, borderColor, ...p
       const y = calculatePosition(currentPosition.y, deltaY, direction, aspect);
       const z = currentPosition.z;
       api.start({ position: [x, y, z] });
-
+      // run the callback
       if (!down) {
         setPosition([x, currentPosition.y, z]);
       }
@@ -117,12 +144,14 @@ export const Control = ({ radius = 0.25, segments = 50, color, borderColor, ...p
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
     >
-      <animated.mesh {...spring}>
-        <circleGeometry args={circleArgs} />
+      <animated.mesh {...spring} rotation={[degToRad(90), 0, 0]}>
+        <cylinderGeometry args={coinArgs} />
         <meshToonMaterial color={color} emissive={0x000000} fog />
       </animated.mesh>
 
-      <animated.mesh {...spring} {...tube} />
+      <animated.mesh {...spring} {...border} />
+
+      <animated.mesh {...spring} {...icon} />
     </animated.group>
   );
 };
