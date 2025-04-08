@@ -1,94 +1,108 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Vector3 as ThreeVector3 } from 'three';
-import { Vector3, Color, useThree, ThreeEvent } from '@react-three/fiber';
-import { useDrag } from '@use-gesture/react';
-import { animated, useSpring } from '@react-spring/three';
-import get from 'lodash/get';
-import isFunction from 'lodash/isFunction';
-
-import { calculatePosition } from './utils';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TextureLoader, Vector3, Plane, Raycaster, Vector2 } from "three";
+import {
+  useThree,
+  ThreeEvent,
+  useLoader,
+  GroupProps,
+} from "@react-three/fiber";
+import { useDrag } from "@use-gesture/react";
+import { animated, useSpring } from "@react-spring/three";
 
 interface Props {
-  position: Vector3;
+  position: [number, number, number];
   radius?: number;
-  segments?: number;
-  color: Color;
+  color?: string;
   borderColor?: string;
 }
 
-const SENSITIVITY = 0.15;
-
-export const Control = ({ radius = 0.25, segments = 50, color, ...props }: Props) => {
-  const [position, setPosition] = useState(props.position);
-  const { size, viewport } = useThree();
-  const aspect = (size.width / viewport.width) * SENSITIVITY;
-
-  const circleArgs = useMemo(() => [radius, segments] as [number, number], [radius, segments]);
-
+export const Control = ({
+  radius = 0.25,
+  position: initialPosition,
+}: Props) => {
+  const [position, setPosition] = useState(initialPosition);
+  const { size, camera } = useThree();
+  const iconTexture = useLoader(TextureLoader, "/slope.png");
   const [spring, api] = useSpring(() => ({ position }), [position]);
 
-  const bind = useDrag(
-    ({ delta: [, deltaY], timeStamp, down, event, direction }) => {
-      const currentPosition = get(
-        event,
-        'object.position',
-        new ThreeVector3(get(position, '0', 0), get(position, '1', 0), get(position, '2', 0)),
-      );
-      const x = currentPosition.x;
-      const y = calculatePosition(currentPosition.y, deltaY, direction, aspect);
-      const z = currentPosition.z;
-      api.start({ position: [x, y, z] });
+  const planeIntersectPoint = useRef(new Vector3());
+  const plane = useMemo(
+    () => new Plane(new Vector3(0, 0, 1), -initialPosition[2]),
+    [initialPosition]
+  );
+  const raycaster = useMemo(() => new Raycaster(), []);
+  const dragOffset = useRef(0);
 
-      if (!down) {
-        setPosition([x, currentPosition.y, z]);
+  const bind = useDrag(({ xy: [clientX, clientY], first, down }) => {
+    const x = (clientX / size.width) * 2 - 1;
+    const y = -(clientY / size.height) * 2 + 1;
+
+    raycaster.setFromCamera(new Vector2(x, y), camera);
+    raycaster.ray.intersectPlane(plane, planeIntersectPoint.current);
+
+    if (planeIntersectPoint.current) {
+      if (first) {
+        dragOffset.current = planeIntersectPoint.current.y - position[1];
       }
 
-      return timeStamp;
-    },
-    { delay: true },
-  );
+      const newY = planeIntersectPoint.current.y - dragOffset.current;
+      const newPosition: [number, number, number] = [
+        position[0],
+        newY,
+        position[2],
+      ];
+
+      api.start({
+        position: newPosition,
+        immediate: down,
+        onRest: () => {
+          if (!down) {
+            setPosition(newPosition);
+          }
+        },
+      });
+    }
+  });
+
   const { onPointerDown, onPointerUp, ...boundAttributes } = bind();
 
   const handlePointerDown = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
       event.stopPropagation();
-      document.dispatchEvent(new CustomEvent('disable-camera'));
-      if (isFunction(onPointerDown)) {
-        // @ts-expect-error due to type incompatibility between react-three-fiber and react-spring
-        onPointerDown(event);
-      }
+      document.dispatchEvent(new CustomEvent("disable-camera"));
+      if (onPointerDown) onPointerDown(event as unknown as React.PointerEvent);
     },
-    [onPointerDown],
+    [onPointerDown]
   );
 
   const handlePointerUp = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
       event.stopPropagation();
-      document.dispatchEvent(new CustomEvent('enable-camera'));
-
-      if (isFunction(onPointerUp)) {
-        // @ts-expect-error due to type incompatibility between react-three-fiber and react-spring
-        onPointerUp(event);
-      }
+      document.dispatchEvent(new CustomEvent("enable-camera"));
+      if (onPointerUp) onPointerUp(event as unknown as React.PointerEvent);
     },
-    [onPointerUp],
+    [onPointerUp]
   );
 
   useEffect(() => {
-    setPosition(props.position);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [get(props.position, '0'), get(props.position, '1'), get(props.position, '2')]);
+    setPosition(initialPosition);
+  }, [initialPosition[0], initialPosition[1], initialPosition[2]]);
 
   return (
-    // @ts-expect-error due to type incompatibility between react-three-fiber and react-spring
-    <animated.mesh
-      {...spring}
-      {...boundAttributes}
+    <animated.group
+      {...(spring as unknown as GroupProps)}
+      {...(boundAttributes as unknown as Partial<GroupProps>)}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
     >
-      <circleGeometry args={circleArgs} />
-      <meshToonMaterial color={color} emissive={0x000000} fog />
-    </animated.mesh>
+      <sprite scale={[radius * 2, radius * 2, 1]}>
+        <spriteMaterial
+          map={iconTexture}
+          depthTest={false}
+          transparent
+          opacity={0.9}
+        />
+      </sprite>
+    </animated.group>
   );
 };
